@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pie Spiral Stairway</title>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="bower_components/d3/d3.js"></script>
+    <script type="text/javascript" src="bower_components/jquery/jquery.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/geometry.css">
+
+    <script type="text/javascript">
+    $(document).ready(function () {
+
+        var radius = 200;
+        var arc = d3.svg.arc().outerRadius(radius);
+
+        //Margins
+        var margin = {top: 20, right: 30, bottom: 30, left: 63},
+                width = 800 - margin.left - margin.right,
+                height = 480 - margin.top - margin.bottom;
+
+        //create the initial svg area
+        var chart = d3.select(".chart")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("svg:g")
+                .attr("transform", "translate(" + 230 + "," + 200 + ")");
+
+        //Background transparent circle to help with mouse leave
+        //events
+        chart.append("svg:circle")
+                .attr("r", radius)
+                .attr("id", "boundingcircle")
+                .style("opacity", 0);
+
+        //Initial data to populate the chart with
+        var data = [
+            {"label": "(John) 95 Units", "value": 95},
+            {"label": "(Don) 15 Units", "value": 15},
+            {"label": "(Carl) 84 Units", "value": 84},
+            {"label": "(Jean) 78 Units", "value": 78},
+            {"label": "(Evan) 77 Units", "value": 77},
+            {"label": "(Braden) 76 Units", "value": 76},
+            {"label": "(Gomo) 40 Units", "value": 40}
+        ];
+        updatePieChart(data);
+
+        //Button to update the chart has been clicked
+        $( "#clickbutton" ).click(function() {
+            var textData = $("#dataarea").val();
+            var data = jQuery.parseJSON(textData);
+            updatePieChart(data);
+        });
+
+        // Add the mouseleave handler to the bounding circle.
+        d3.select("#boundingcircle").on("mouseleave", mouseleave);
+
+        /**
+         * Function to update the pie chart
+         * @param data The array of data to update the pie chart with
+         */
+        function updatePieChart(data) {
+            addGradients(data);
+            updatePaths(data);
+            var allPaths = d3.selectAll(".slice path");
+            drawLegend(d3.select(allPaths[0][allPaths[0].length - 1]));
+        }
+
+        /**
+         * Adds additional data to the data set such as
+         * - colors
+         * - percentage
+         * - Shadowing
+         * - Transparency
+         * - Scale
+         * @param data The data to augment
+         */
+        function addAdditionalData(data) {
+            var colors = [
+                "#fbb4ae", "#b3cde3", "#ccebc5", "#decbe4", "#fed9a6", "#ffffcc",
+                "#e5d8bd", "#fddaec", "#f2f2f2", "#b3e2cd", "#fdcdac", "#cbd5e8",
+                "#f4cae4", "#e6f5c9", "#fff2ae", "#f1e2cc", "#cccccc", "#8dd3c7",
+                "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462", "#b3de69",
+                "#fccde5", "#d9d9d9", "#bc80bd", "#ccebc5", "#ffed6f"
+            ];
+            var newI = 0;
+
+            //Get the total to get the percent
+            var total = 0;
+            var i;
+            for(i = 0; i < data.length; ++i) {
+                total += data[i].value;
+            }
+
+            //Loop again to compute the colors,
+            //percentage, opacity, and deviations
+            for(i = 0; i < data.length; ++i) {
+                if(i > 0) {
+                    if(data[i].value !== data[i - 1].value) {
+                        newI++;
+                    }
+                }
+                var scale = 1 - (newI * .05);
+                var bright = ((newI + 1) * .3) - 1;
+                var dark = (newI + .5) * .3;
+
+                var stdDeviation = 5 - (newI *.5);
+                if(stdDeviation < 1) {
+                    stdDeviation = 1;
+                }
+                var matrixOpacity = .2 + (newI *.06);
+                if(matrixOpacity > .7) {
+                    matrixOpacity = .7;
+                }
+                var matrixEndValue = .7 - (newI * .1);
+                if(matrixEndValue < .2) {
+                    matrixEndValue = .2;
+                }
+                //Only add the filter if we are using shadows
+                if($("#scale").is(':checked')) {
+                    data[i].scale = scale;
+                } else {
+                    data[i].scale = 1;
+                }
+
+                data[i].percent = Math.round((data[i].value/total) * 100) + "%";
+
+                //Generate a unique key so that every single time a new pie chart is created it's
+                //considered new.
+                data[i].key = Math.random();
+
+                //If they have "colors" checked then use colors, otherwise use white
+                var color = colors[i];
+                if(!$("#colors").is(':checked')) {
+                    color = "white";
+                }
+
+                data[data.length - i - 1].bright = d3.rgb(color).darker(bright).toString();
+                data[data.length - i - 1].dark = d3.rgb(color).darker(dark).toString();
+                data[data.length - i - 1].matrixOpacity = matrixOpacity;
+                data[data.length - i - 1].matrixEndValue = matrixEndValue;
+                data[i].stdDeviation = stdDeviation;
+            }
+        }
+
+        /**
+         * Add the gradients to the "def" section
+         * @param data The data set
+         */
+        function addGradients(data) {
+            data.sort(function(a, b) {
+                return a.value > b.value ? -1 : a.value < b.value ? 1 : 1;
+            });
+            addAdditionalData(data);
+
+            var linearGradient =
+                    d3.select(".chart-defs")
+                            .selectAll(".chrome-cannot-select-linearGradients")
+                            .data(data, function (data) {
+                                return data.key;
+                            });
+
+            linearGradient.exit().remove();
+            linearGradient.enter().append("linearGradient");
+
+            linearGradient
+                    .attr("id", function(d, i) {
+                        return "stairway-pie-defs-cat-" + i;
+                    })
+                    .attr("class", "chrome-cannot-select-linearGradients")
+                    .attr("x1", "0%")
+                    .attr("y1", "20%")
+                    .attr("x2", "0%")
+                    .attr("y2", "100%");
+
+            linearGradient
+                    .append("stop")
+                    .attr("offset", "10%")
+                    .style("stop-color", function(data) {
+                        return data.bright;
+                    })
+                    .style("stop-opacity",1);
+
+            linearGradient
+                    .append("stop")
+                    .attr("offset", "100%")
+                    .style("stop-color", function(data) {
+                        return data.dark;
+                    })
+                    .style("stop-opacity",1);
+
+            var filter = d3.select(".chart-defs").selectAll("circlefilter")
+                    .data(data, function (data) {
+                        return data.key;
+                    });
+
+            filter.exit().remove();
+            filter.enter().append("filter");
+
+            filter.attr("id", function(data, i) {
+                        return "stairway-pie-defs-shadow-cat-" + i;
+                    })
+                    .attr("class", "circlefilter")
+                    .attr("x", -1)
+                    .attr("y", 0)
+                    .attr("width", "250%")
+                    .attr("height", "250%");
+
+            filter.append("feOffset")
+                    .attr("result", "offOut")
+                    .attr("in", "SourceGraphic")
+                    .attr("dx", 6)
+                    .attr("dy", 7);
+
+            filter.append("feColorMatrix")
+                    .attr("result", "matrixOut")
+                    .attr("in", "offOut")
+                    .attr("type", "matrix")
+                    .attr("values", function(data) {
+                        return data.matrixOpacity +
+                                " 0 0 0 0 0 " +
+                                data.matrixOpacity +
+                                " 0 0 0 0 0 " +
+                                data.matrixOpacity +
+                                " 0 0 0 0 0 " +
+                                data.matrixEndValue + " 0";
+                    });
+
+            filter.append("feGaussianBlur")
+                    .attr("result", "blurOut")
+                    .attr("in", "matrixOut")
+                    .attr("stdDeviation", function(data) {
+                        return data.stdDeviation;
+                    });
+
+            filter.append("feBlend")
+                    .attr("in", "SourceGraphic")
+                    .attr("in2", "blurOut")
+                    .attr("mode", "normal");
+        }
+
+        /**
+         * Adds all the circle paths
+         * @param data The data set
+         */
+        function updatePaths(data) {
+            data.sort(function(a, b) {
+                return a.value < b.value ? -1 : a.value > b.value ? 1 : 1;
+            });
+
+            var pie = d3.layout.pie()
+                    .value(function (d) {
+                        return d.value;
+                    })
+                    .startAngle(20 * (Math.PI / 180))
+                    .endAngle(380 * (Math.PI / 180))
+                    .sort(function (a, b) {
+                        return a.value < b.value ? -1 : a.value > b.value ? 1 : 0;
+                    });
+
+            var vis = d3.select(".chart").data([data]);
+
+            var slices = vis.select("g").selectAll(".slice").data(pie, function(data) {
+                return data.data.key;
+            });
+
+            slices.exit().remove();
+
+            slices.enter()
+                    .append("svg:g")
+                    .attr("class", "slice");
+
+            var path = slices.append("svg:path")
+                    .attr("fill", function (d, i) {
+                        return "url(#stairway-pie-defs-cat-" + i + ")";
+                    })
+                    .attr("d", function (d) {
+                        return arc(d);
+                    })
+                    .attr("transform", function (d) {
+                        return "scale(" + d.data.scale + ")";
+                    })
+                    .on("mouseover", mouseover);
+
+            //Only add the filter if we are using shadows
+            if($("#shadows").is(':checked')) {
+                path.attr("filter", function (d, i) {
+                    return "url(#stairway-pie-defs-shadow-cat-" + i + ")";
+                })
+            }
+        }
+
+        /**
+         * Called when the mouse is over the circles
+         * @param datatum The datum
+         */
+        function mouseover(datatum) {
+            // Fade all the segments.
+            var paths = d3.selectAll(".slice path")
+                    .style("opacity", 0.7);
+
+            var path = paths.filter(function (node) {
+                return (node === datatum);
+            });
+
+            //Remove the other title, text line, and text circle
+            d3.selectAll(".title").remove();
+            d3.selectAll(".subtitle").remove();
+            d3.selectAll(".textline").remove();
+            d3.selectAll(".textcircle").remove();
+
+            path.style("opacity", 1);
+            drawLegend(path);
+        }
+
+        /**
+         * Draws the line'd legend given a circle path
+         * @param path The circle path
+         */
+        function drawLegend(path) {
+            var node = d3.select(path.node().parentNode);
+            node.append("svg:circle")
+                    .attr("class", "textcircle")
+                    //The line won't show up in firefox and IE with this set for some reason
+                    //so I'm leaving it off for right now
+                    //.attr("filter", "url(#lineShadow)")
+                    .attr("r", 4)
+                    .attr("transform", function (d) {
+                        d.innerRadius = 0;
+                        d.outerRadius = radius;
+                        return "translate(" + arc.centroid(d) + ")";
+                    });
+            node.append("svg:line")
+                    .attr("class", "textline")
+                    .attr("stroke-width", 2)
+                    .attr("stroke", "white")
+                    .attr("x1", 4)
+                    .attr("y1", 0)
+                    .attr("x2", function(d) {
+                        d.innerRadius = 0;
+                        d.outerRadius = radius;
+                        var placement = arc.centroid(d);
+                        return 320 - placement[0];
+                    })
+                    .attr("y2", 0)
+                    .attr("stroke-linecap", "round")
+                    //The line won't show up in firefox and IE with this set for some reason
+                    //so I'm leaving it off for right now
+                    //.attr("filter", "url(#lineShadow)")
+                    .attr("transform", function (d) {
+                        d.innerRadius = 0;
+                        d.outerRadius = radius;
+                        return "translate(" + arc.centroid(d) + ")";
+                    });
+
+            node.append("svg:text")
+                    .attr("transform", function (d) {
+                        d.innerRadius = 0;
+                        d.outerRadius = radius;
+                        var textPlacement = arc.centroid(d);
+                        textPlacement[0]+= 315 - textPlacement[0];
+                        textPlacement[1]-= 7;
+                        return "translate(" + textPlacement + ")";
+                    })
+                    .attr("class", "title")
+                    .text(function(d){
+                        return d.data.percent;
+                    });
+
+            node.append("svg:text")
+                    .attr("transform", function (d) {
+                        d.innerRadius = 0;
+                        d.outerRadius = radius;
+                        var textPlacement = arc.centroid(d);
+                        textPlacement[0]+= 315 - textPlacement[0];
+                        textPlacement[1]+= 20;
+                        return "translate(" + textPlacement + ")";
+                    })
+                    .attr("class", "subtitle")
+                    .text(function(d){
+                        return d.data.label;
+                    });
+        }
+
+        /**
+         * Restore everything to full opacity when
+         * moving off the visualization.
+         * @param d The bound data
+         */
+        function mouseleave(d) {
+            d3.selectAll(".slice path")
+                    .style("opacity", 1);
+        }
+    });
+    </script>
+</head>
+<body>
+    <div class="demo-container">
+        <div>
+            <h1>
+                Pie Spiral Stairway
+            </h1>
+            <p>
+                This shows custom pie features from <a href="http://d3js.org/">d3js</a> as an attractive
+                staircase spiral chart.  This demonstrates basic arcs, filters for shadows,
+                and transitioning of colors.
+            </p>
+        </div>
+        <div>
+            <span>
+                <svg class="chart" width="400" height="500">
+                    <defs class="chart-defs">
+                        <!-- Drop shadow for the line-->
+                        <filter id="lineShadow" x="-1" y="-1" width="250%" height="250%">
+                            <feOffset result="offOut" in="SourceGraphic" dx="1" dy="1"></feOffset>
+                            <feColorMatrix result="matrixOut" in="offOut" type="matrix"
+                                           values="0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0"></feColorMatrix>
+                            <feGaussianBlur result="blurOut" in="matrixOut" stdDeviation="1"></feGaussianBlur>
+                            <feBlend in="SourceGraphic" in2="blurOut" mode="normal"></feBlend>
+                        </filter>
+                    </defs>
+                </svg>
+            </span>
+        </div>
+        <div id="wrapper">
+            <div id="first">
+                <textarea id="dataarea" rows="11" cols="50">
+[
+{"label": "(John) 95 Units", "value": 95},
+{"label": "(Don) 15 Units", "value": 15},
+{"label": "(Carl) 84 Units", "value": 84},
+{"label": "(Jean) 78 Units", "value": 78},
+{"label": "(Evan) 77 Units", "value": 77},
+{"label": "(Braden) 76 Units", "value": 76},
+{"label": "(Gomo) 40 Units", "value": 40}
+]
+                </textarea>
+            </div>
+            <div id="second">
+                <div id="updatetext">
+                    Change the JSON text to the left, then click
+                    the button below to update the chart.
+                </div>
+                <button id="clickbutton">Click to update chart</button>
+                <div class="extraoptions">
+                    <div>
+                        Use these extra options to turn on/off the colors,
+                        shadows, or dynamic scaling.
+                    </div>
+                    <div class="extraoptions">
+                        <input type="checkbox" id="colors" checked>Colors
+                        <input type="checkbox" id="shadows" checked>Shadows
+                        <input type="checkbox" id="scale" checked>Scale
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
