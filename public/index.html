@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pie Spiral Stairway</title>
+  <meta charset="UTF-8">
+  <script type="text/javascript" src="vendor/d3/d3.js"></script>
+  <script type="text/javascript" src="vendor/jquery/jquery.js"></script>
+  <script type="text/javascript" src="js/pie.js"></script>
+  <link rel="stylesheet" type="text/css" href="css/geometry.css">
+</head>
+<body>
+  <div class="demo-container">
+    <div>
+      <h1>
+        Pie Spiral Stairway
+      </h1>
+      <p>
+        This shows custom pie features from <a href="http://d3js.org/">d3js</a> as an attractive
+        staircase spiral chart.  This demonstrates basic arcs, filters for shadows,
+        and transitioning of colors.  Hover over the pie chart elements to see the legend change
+        dynamically.
+      </p>
+    </div>
+    <div>
+      <span>
+        <svg class="chart" width="400" height="500">
+          <defs class="chart-defs">
+            <!-- Drop shadow for the line-->
+            <filter id="lineShadow" x="-1" y="-1" width="250%" height="250%">
+              <feOffset result="offOut" in="SourceGraphic" dx="1" dy="1"></feOffset>
+              <feColorMatrix result="matrixOut" in="offOut" type="matrix"
+                values="0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0"></feColorMatrix>
+              <feGaussianBlur result="blurOut" in="matrixOut" stdDeviation="1"></feGaussianBlur>
+              <feBlend in="SourceGraphic" in2="blurOut" mode="normal"></feBlend>
+            </filter>
+          </defs>
+        </svg>
+      </span>
+    </div>
+    <div id="wrapper">
+      <div id="first">
+        <textarea id="dataarea" rows="11" cols="50">
+[
+{"label": "(John) 95 Units", "value": 95},
+{"label": "(Don) 15 Units", "value": 15},
+{"label": "(Carl) 84 Units", "value": 84},
+{"label": "(Jean) 78 Units", "value": 78},
+{"label": "(Evan) 77 Units", "value": 77},
+{"label": "(Braden) 76 Units", "value": 76},
+{"label": "(Gomo) 40 Units", "value": 40}
+]
+        </textarea>
+      </div>
+      <div id="second">
+        <div id="updatetext">
+          Change the JSON text to the left, then click
+          the button below to update the chart.
+        </div>
+        <button id="clickbutton">Click to update chart</button>
+        <div class="extraoptions">
+          <div>
+            Use these extra options to turn on/off the colors,
+            shadows, or dynamic scaling.
+          </div>
+          <div class="extraoptions">
+            <input type="checkbox" id="colors" checked>Colors
+            <input type="checkbox" id="shadows" checked>Shadows
+            <input type="checkbox" id="scale" checked>Scale
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "pie-stairway-demo",
+  "version": "1.0.0",
+  "description": "pie stairway demo with es6 syntax",
+  "scripts": {
+    "test": "mocha",
+    "lint": "eslint public/js"
+  },
+  "author": "Frank Hassanabad",
+  "license": "MIT",
+  "repository": "https://github.com/FrankHassanabad/pie-stairway.git",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "esdoc": "^0.4.8",
+    "eslint": "^3.10.2",
+    "eslint-config-airbnb": "^13.0.0",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-jsx-a11y": "^2.2.3",
+    "eslint-plugin-react": "^6.7.1",
+    "mocha": "^3.1.2",
+    "proxyquire": "^1.7.10",
+    "sinon": "^1.17.6",
+    "sinon-chai": "^2.8.0"
+  }
+}

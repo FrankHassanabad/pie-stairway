@@ -1,0 +1,76 @@
+body {
+  background: whitesmoke;
+  color: #505050;
+  text-shadow: 2px 1px 3px rgba(200, 200, 200, 0.43);
+}
+
+.demo-container {
+  box-sizing: border-box;
+  width: 850px;
+  height: 600px;
+  padding: 0px 15px 15px;
+  margin: 15px 10px;
+  border: 1px solid #ddd;
+
+  background-image: -webkit-gradient(
+      linear,
+      left top,
+      left bottom,
+      color-stop(0.14, #EAECF1),
+      color-stop(0.99, #E2E9EA)
+  );
+  background-image: -o-linear-gradient(bottom, #dccba7 40%, #c3a96b 99%);
+  background-image: -moz-linear-gradient(bottom, #dccba7 40%, #c3a96b 99%);
+  background-image: -webkit-linear-gradient(bottom, #dccba7 40%, #c3a96b 99%);
+  background-image: -ms-linear-gradient(bottom, #dccba7 40%, #c3a96b 99%);
+  background-image: linear-gradient(to bottom, #dccba7 40%, #c3a96b 99%);
+}
+
+.title {
+  fill: white;
+  font-size: 180%;
+  font-family: Arial;
+  text-anchor: end;
+  text-shadow: 2px 1px 3px #9a9a9a;
+  text-anchor: end;
+}
+
+.subtitle {
+  fill: white;
+  font-size: 100%;
+  font-family: Arial;
+  text-anchor: end;
+  text-shadow: 2px 1px 3px #9a9a9a;
+  text-anchor: end;
+}
+
+.textcircle {
+  fill: white;
+}
+
+#wrapper {
+  width: 800px;
+  overflow: auto; /* so the size of the wrapper is always the size of the longest content */
+}
+#first {
+  float: left;
+  width: 450px;
+}
+#second {
+  margin: 0 0 0 402px; /* considering the border you need to use a margin so the content does not float under the first div*/
+}
+
+#clickbutton {
+  margin-top: 10px;
+  font-family:Arial;
+  height:40px;
+  width: 300px;
+}
+
+#updatetext {
+  margin-top: 10px;
+}
+
+.extraoptions {
+  margin-top: 10px;
+}
