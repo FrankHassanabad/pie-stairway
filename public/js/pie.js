@@ -4,6 +4,14 @@
 const RADIUS = 200;
 
 /**
+ * Given an arc, this returns the arc with the innerRadius and outerRadius
+ * set for placing labels, transforming it, etc...
+ * @param   {Object} arc The arc to return augmented with innerRadius and outerRadius
+ * @returns {Object}     The augmented arc
+ */
+const createCentroid = arc => Object.assign({}, arc, { innerRadius: 0, outerRadius: RADIUS });
+
+/**
  * Draws the line'd legend given a circle path
  * @param {Object} path The circle path
  * @param {Object} arc The circle arc
@@ -12,57 +20,40 @@ const RADIUS = 200;
 const drawLegend = ({ path, arc }) => {
   const node = d3.select(path.node().parentNode);
   node.append('svg:circle')
-    .attr('class', 'textcircle')
-    .attr('r', 4)
-    .attr('transform', (d) => {
-      d.innerRadius = 0;      // eslint-disable-line no-param-reassign
-      d.outerRadius = RADIUS; // eslint-disable-line no-param-reassign
-      return `translate(${arc.centroid(d)})`;
-    });
+      .attr('class', 'textcircle')
+      .attr('r', 4)
+      .attr('transform', d => `translate(${arc.centroid(createCentroid(d))})`);
 
   node.append('svg:line')
-    .attr('class', 'textline')
-    .attr('stroke-width', 2)
-    .attr('stroke', 'white')
-    .attr('x1', 4)
-    .attr('y1', 0)
-    .attr('x2', (d) => {
-      d.innerRadius = 0;      // eslint-disable-line no-param-reassign
-      d.outerRadius = RADIUS; // eslint-disable-line no-param-reassign
-      const placement = arc.centroid(d);
-      return 320 - placement[0];
-    })
-    .attr('y2', 0)
-    .attr('stroke-linecap', 'round')
-    .attr('transform', (d) => {
-      d.innerRadius = 0;      // eslint-disable-line no-param-reassign
-      d.outerRadius = RADIUS; // eslint-disable-line no-param-reassign
-      return `translate(${arc.centroid(d)})`;
-    });
+      .attr('class', 'textline')
+      .attr('stroke-width', 2)
+      .attr('stroke', 'white')
+      .attr('x1', 4)
+      .attr('y1', 0)
+      .attr('x2', d => 320 - arc.centroid(createCentroid(d))[0])
+      .attr('y2', 0)
+      .attr('stroke-linecap', 'round')
+      .attr('transform', d => `translate(${arc.centroid(createCentroid(d))})`);
 
   node.append('svg:text')
-    .attr('transform', (d) => {
-      d.innerRadius = 0;      // eslint-disable-line no-param-reassign
-      d.outerRadius = RADIUS; // eslint-disable-line no-param-reassign
-      const textPlacement = arc.centroid(d);
-      textPlacement[0] += 315 - textPlacement[0];
-      textPlacement[1] -= 7;
-      return `translate(${textPlacement})`;
-    })
-    .attr('class', 'title')
-    .text(d => d.data.percent);
+      .attr('transform', (d) => {
+        const textPlacement = arc.centroid(createCentroid(d));
+        textPlacement[0] += 315 - textPlacement[0];
+        textPlacement[1] -= 7;
+        return `translate(${textPlacement})`;
+      })
+      .attr('class', 'title')
+      .text(({ data : { percent } }) => percent);
 
   node.append('svg:text')
-    .attr('transform', (d) => {
-      d.innerRadius = 0;      // eslint-disable-line no-param-reassign
-      d.outerRadius = RADIUS; // eslint-disable-line no-param-reassign
-      const textPlacement = arc.centroid(d);
-      textPlacement[0] += 315 - textPlacement[0];
-      textPlacement[1] += 20;
-      return `translate(${textPlacement})`;
-    })
-    .attr('class', 'subtitle')
-    .text(d => d.data.label);
+      .attr('transform', (d) => {
+        const textPlacement = arc.centroid(createCentroid(d));
+        textPlacement[0] += 315 - textPlacement[0];
+        textPlacement[1] += 20;
+        return `translate(${textPlacement})`;
+      })
+      .attr('class', 'subtitle')
+      .text(({ data : { label } }) => label);
 };
 
 /**
@@ -70,10 +61,7 @@ const drawLegend = ({ path, arc }) => {
  * moving off the visualization.
  * @returns {void}
  */
-const mouseleave = () => {
-  d3.selectAll('.slice path')
-    .style('opacity', 1);
-};
+const mouseleave = () => d3.selectAll('.slice path').style('opacity', 1);
 
 /**
  * Called when the mouse is over the circles
@@ -187,33 +175,33 @@ const updatePaths = ({ data, arc }) => {
     return 1;
   });
 
-  const pie = d3.layout.pie()
-    .value(d => d.value)
-    .startAngle(20 * (Math.PI / 180))
-    .endAngle(380 * (Math.PI / 180))
-    .sort((a, b) => {
-      if (a.value < b.value) {
-        return -1;
-      } else if (a.value > b.value) {
-        return 1;
-      }
-      return 0;
-    });
+  const pie = d3.pie()
+      .value(d => d.value)
+      .startAngle(20 * (Math.PI / 180))
+      .endAngle(380 * (Math.PI / 180))
+      .sort((a, b) => {
+        if (a.value < b.value) {
+          return -1;
+        } else if (a.value > b.value) {
+          return 1;
+        }
+        return 0;
+      });
 
-  const vis    = d3.select('.chart').data([data]);
-  const slices = vis.select('g').selectAll('.slice').data(pie, ({ data : { key } }) => key);
+  const vis   = d3.select('.chart').data([data]);
+  const slice = vis.select('g').selectAll('.slice').data(pie, ({ data : { key } }) => key);
 
-  slices.exit().remove();
+  slice.exit().remove();
 
-  slices.enter()
+  const slices = slice.enter()
     .append('svg:g')
-    .attr('class', 'slice');
+      .attr('class', 'slice');
 
   const path = slices.append('svg:path')
-    .attr('fill', (d, i) => `url(#stairway-pie-defs-cat-${i})`)
-    .attr('d', d => arc(d))
-    .attr('transform', d => `scale(${d.data.scale})`)
-    .on('mouseover', datum => mouseover({ datum, arc }));
+      .attr('fill', (d, i) => `url(#stairway-pie-defs-cat-${i})`)
+      .attr('d', ({ startAngle, endAngle }) => arc({ startAngle, endAngle, innerRadius : 0, outerRadius : 200 }))
+      .attr('transform', d => `scale(${d.data.scale})`)
+      .on('mouseover', datum => mouseover({ datum, arc }));
 
   // Only add the filter if we are using shadows
   if ($('#shadows').is(':checked')) {
@@ -227,70 +215,68 @@ const updatePaths = ({ data, arc }) => {
  * @returns {void}
  */
 const addGradients = ({ data }) => {
-  const linearGradient =
-    d3.select('.chart-defs')
+  const chartDefs = d3.select('.chart-defs')
       .selectAll('.chrome-cannot-select-linearGradients')
       .data(data, ({ key }) => key);
 
-  linearGradient.exit().remove();
-  linearGradient.enter().append('linearGradient');
+  chartDefs.exit().remove();
+  const linearGradient = chartDefs.enter().append('linearGradient');
 
   linearGradient
-    .attr('id', (d, i) => `stairway-pie-defs-cat-${i}`)
-    .attr('class', 'chrome-cannot-select-linearGradients')
-    .attr('x1', '0%')
-    .attr('y1', '20%')
-    .attr('x2', '0%')
-    .attr('y2', '100%');
+      .attr('id', (d, i) => `stairway-pie-defs-cat-${i}`)
+      .attr('class', 'chrome-cannot-select-linearGradients')
+      .attr('x1', '0%')
+      .attr('y1', '20%')
+      .attr('x2', '0%')
+      .attr('y2', '100%');
 
-  linearGradient
-    .append('stop')
-    .attr('offset', '10%')
-    .style('stop-color', ({ bright }) => bright)
-    .style('stop-opacity', 1);
+  linearGradient.append('stop')
+      .attr('offset', '10%')
+      .style('stop-color', ({ bright }) => bright)
+      .style('stop-opacity', 1);
 
-  linearGradient
-    .append('stop')
-    .attr('offset', '100%')
-    .style('stop-color', ({ dark }) => dark)
-    .style('stop-opacity', 1);
+  linearGradient.append('stop')
+      .attr('offset', '100%')
+      .style('stop-color', ({ dark }) => dark)
+      .style('stop-opacity', 1);
 
-  const filter = d3.select('.chart-defs').selectAll('circlefilter')
-    .data(data, ({ key }) => key);
+  const circleFilter = d3.select('.chart-defs')
+      .selectAll('circlefilter')
+      .data(data, ({ key }) => key);
 
-  filter.exit().remove();
-  filter.enter().append('filter');
+  circleFilter.exit().remove();
+  const filter = circleFilter.enter().append('filter');
 
   filter.attr('id', (d, i) => `stairway-pie-defs-shadow-cat-${i}`)
-  .attr('class', 'circlefilter')
-  .attr('x', -1)
-  .attr('y', 0)
-  .attr('width', '250%')
-  .attr('height', '250%');
+      .attr('class', 'circlefilter')
+      .attr('x', -1)
+      .attr('y', 0)
+      .attr('width', '250%')
+      .attr('height', '250%');
 
   filter.append('feOffset')
-    .attr('result', 'offOut')
-    .attr('in', 'SourceGraphic')
-    .attr('dx', 6)
-    .attr('dy', 7);
+      .attr('result', 'offOut')
+      .attr('in', 'SourceGraphic')
+      .attr('dx', 6)
+      .attr('dy', 7);
 
   filter.append('feColorMatrix')
-    .attr('result', 'matrixOut')
-    .attr('in', 'offOut')
-    .attr('type', 'matrix')
-    .attr('values', ({ matrixOpacity, matrixEndValue }) =>
-      `${matrixOpacity} 0 0 0 0 0 ${matrixOpacity} 0 0 0 0 0 ${matrixOpacity} 0 0 0 0 0 ${matrixEndValue} 0` // eslint-disable-line
-    );
+      .attr('result', 'matrixOut')
+      .attr('in', 'offOut')
+      .attr('type', 'matrix')
+      .attr('values', ({ matrixOpacity, matrixEndValue }) =>
+        `${matrixOpacity} 0 0 0 0 0 ${matrixOpacity} 0 0 0 0 0 ${matrixOpacity} 0 0 0 0 0 ${matrixEndValue} 0` // eslint-disable-line
+      );
 
   filter.append('feGaussianBlur')
-    .attr('result', 'blurOut')
-    .attr('in', 'matrixOut')
-    .attr('stdDeviation', ({ stdDeviation }) => stdDeviation);
+      .attr('result', 'blurOut')
+      .attr('in', 'matrixOut')
+      .attr('stdDeviation', ({ stdDeviation }) => stdDeviation);
 
   filter.append('feBlend')
-    .attr('in', 'SourceGraphic')
-    .attr('in2', 'blurOut')
-    .attr('mode', 'normal');
+      .attr('in', 'SourceGraphic')
+      .attr('in2', 'blurOut')
+      .attr('mode', 'normal');
 };
 
 /**
@@ -317,12 +303,10 @@ const sortData = ({ data }) => {
  * @returns {void}
  */
 const updatePieChart = ({ data, arc }) => {
-  const sortedData = sortData({ data });
+  const sortedData    = sortData({ data });
   const augmentedData = addAdditionalData({ data : sortedData });
   addGradients({ data : augmentedData });
   updatePaths({ data : augmentedData, arc });
-  const allPaths = d3.selectAll('.slice path');
-  drawLegend({ path : d3.select(allPaths[0][allPaths[0].length - 1]), arc });
 };
 
 /**
@@ -330,7 +314,7 @@ const updatePieChart = ({ data, arc }) => {
  * @returns {void}
  */
 const init = () => {
-  const arc = d3.svg.arc().outerRadius(RADIUS);
+  const arc = d3.arc().outerRadius(RADIUS);
 
   // Margins
   const margin = { top: 20, right: 30, bottom: 30, left: 63 };
@@ -339,17 +323,18 @@ const init = () => {
 
   // create the initial svg area
   const chart = d3.select('.chart')
-    .attr('width', width + margin.left + margin.right)
-    .attr('height', height + margin.top + margin.bottom)
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
     .append('svg:g')
-    .attr('transform', 'translate(230,200)');
+      .attr('transform', 'translate(230,200)');
 
   // Background transparent circle to help with mouse leave
   // events
-  chart.append('svg:circle')
-    .attr('r', RADIUS)
-    .attr('id', 'boundingcircle')
-    .style('opacity', 0);
+  chart.merge(chart)
+    .append('svg:circle')
+      .attr('r', RADIUS)
+      .attr('id', 'boundingcircle')
+      .style('opacity', 0);
 
   // Initial data to populate the chart with
   let data = [
